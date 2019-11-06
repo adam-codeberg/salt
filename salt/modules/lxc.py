@@ -807,11 +807,11 @@ def _network_conf(conf_tuples=None, **kwargs):
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     # on old versions of lxc, still support the gateway auto mode
     # if we didn't explicitly say no to
-    # (lxc.network.ipv4.gateway: auto)
+    # (lxc.net.X.ipv4.gateway: auto)
     if _LooseVersion(version()) <= _LooseVersion('1.0.7') and \
-            True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
-            True in ['lxc.network.ipv4.address' in a for a in ret]:
-        ret.append({'lxc.network.ipv4.gateway': 'auto'})
+            True not in ['lxc.net.X.ipv4.gateway' in a for a in ret] and \
+            True in ['lxc.net.X.ipv4' in a for a in ret]:
+        ret.append({'lxc.net.X.ipv4.gateway': 'auto'})
     return ret
 
 
@@ -910,9 +910,9 @@ def _get_veths(net_data):
                 continue
             elif '=' in item:
                 item = tuple([a.strip() for a in item.split('=', 1)])
-        if item[0] == 'lxc.network.type':
+        if item[0] == 'lxc.net.X.type':
             current_nic = salt.utils.odict.OrderedDict()
-        if item[0] == 'lxc.network.name':
+        if item[0] == 'lxc.net.X.name':
             no_names = False
             nics[item[1].strip()] = current_nic
 
@@ -1564,8 +1564,6 @@ def cloud_init(name, vm_=None, **kwargs):
     '''
     init_interface = cloud_init_interface(name, vm_, **kwargs)
     name = init_interface.pop('name', name)
-    #log.error('* cloud_init init_interface[nic_opts]= {}'.format( init_interface['nic_opts']['eth0'].items() ) ) # seems to be missing content
-    #log.error('* cloud_init init_interface= {}'.format(init_interface))
     return init(name, **init_interface)
 
 
@@ -2536,13 +2534,13 @@ def info(name, path=None):
         current = None
 
         for key, val in config:
-            if key == 'lxc.network.type':
+            if key == 'lxc.net.X.type':
                 current = {'type': val}
                 ifaces.append(current)
             elif not current:
                 continue
-            elif key.startswith('lxc.network.'):
-                current[key.replace('lxc.network.', '', 1)] = val
+            elif key.startswith('lxc.net.X.'):
+                current[key.replace('lxc.net.X.', '', 1)] = val
         if ifaces:
             ret['nics'] = ifaces
 
@@ -3189,7 +3187,6 @@ def bootstrap(name,
                     name, cmd, path=path, python_shell=False
                 )['retcode'] != 0:
                     log.error('tmpdir %s creation failed %s', configdir, cmd)
-                    log.error('RET = FALSE 2')
                     return False
 
                 bs_ = __salt__['config.gather_bootstrap_script'](
@@ -3231,7 +3228,6 @@ def bootstrap(name,
                 ret = False
         else:
             minion_config = salt.config.minion_config(cfg_files['config'])
-            log.error('minion_config= {}'.format(minion_config))
             pki_dir = minion_config['pki_dir']
             copy_to(name,
                     cfg_files['config'],
@@ -3261,7 +3257,6 @@ def bootstrap(name,
                 'touch \'{0}\''.format(SEED_MARKER),
                 path=path,
                 python_shell=False)
-    log.error('bootstrap ret= {}'.format(ret))
     return ret
 
 
@@ -3823,12 +3818,12 @@ def write_conf(conf_file, conf):
             {'lxc.rootfs': {'comment': 'This is another test',
                             'value': 'This is another test'}},
             '\\n',
-            {'lxc.network.type': 'veth'},
-            {'lxc.network.flags': 'up'},
-            {'lxc.network.link': 'br0'},
-            {'lxc.network.mac': '$CONTAINER_MACADDR'},
-            {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
-            {'lxc.network.name': '$CONTAINER_DEVICENAME'},
+            {'lxc.net.X.type': 'veth'},
+            {'lxc.net.X.flags': 'up'},
+            {'lxc.net.X.link': 'br0'},
+            {'lxc.net.X.mac': '$CONTAINER_MACADDR'},
+            {'lxc.net.X.ipv4': '$CONTAINER_IPADDR'},
+            {'lxc.net.X.name': '$CONTAINER_DEVICENAME'},
         ]
     CLI Example:
     .. code-block:: bash
@@ -3895,14 +3890,14 @@ def edit_conf(conf_file,
     CLI Example:
     .. code-block:: bash
         salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
-            out_format=commented lxc.network.type=veth
+            out_format=commented lxc.net.X.type=veth
         salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
             out_format=commented \\
-            lxc_config="[{'lxc.network.name': 'eth0', \\
-                          'lxc.network.ipv4': '1.2.3.4'},
-                         {'lxc.network.name': 'eth2', \\
-                          'lxc.network.ipv4': '1.2.3.5',\\
-                          'lxc.network.gateway': '1.2.3.1'}]"
+            lxc_config="[{'lxc.net.X.name': 'eth0', \\
+                          'lxc.net.X.ipv4': '1.2.3.4'},
+                         {'lxc.net.X.name': 'eth2', \\
+                          'lxc.net.X.ipv4': '1.2.3.5',\\
+                          'lxc.net.X.gateway': '1.2.3.1'}]"
     '''
     data = []
 
@@ -3923,7 +3918,7 @@ def edit_conf(conf_file,
         for kwarg in [a for a in lxc_kws]:
             if kwarg.startswith('__'):
                 continue
-            if kwarg.startswith('lxc.network.'):
+            if kwarg.startswith('lxc.net.X.'):
                 net_params[kwarg] = lxc_kws[kwarg]
                 lxc_kws.pop(kwarg, None)
             #elif kwarg.startswith('lxc.net.'):
@@ -3933,11 +3928,11 @@ def edit_conf(conf_file,
             net_config.append(net_params)
     nic_opts = salt.utils.odict.OrderedDict()
     for params in net_config: # TRACE probbably need to accomodate lxc.net. here
-        if params.startswith('lxc.network.'):
-            dev = params.get('lxc.network.name', DEFAULT_NIC)
+        if params.startswith('lxc.net.X.'):
+            dev = params.get('lxc.net.X.name', DEFAULT_NIC)
             dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
             for param in params:
-                opt = param.replace('lxc.network.', '')
+                opt = param.replace('lxc.net.X.', '')
                 opt = {'hwaddr': 'mac'}.get(opt, opt)
                 dev_opts[opt] = params[param]
     net_changes = []
@@ -3955,7 +3950,7 @@ def edit_conf(conf_file,
         else:
             for key in list(line.keys()):
                 val = line[key]
-                if net_changes and key.startswith('lxc.network.'):
+                if net_changes and key.startswith('lxc.net.X.'):
                     continue
                 elif net_changes and key.startswith('lxc.net.'):
                     continue
