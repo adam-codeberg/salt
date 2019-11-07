@@ -703,8 +703,8 @@ def _network_conf(conf_tuples=None, **kwargs):
         type_ = opts.get('type', args.get('type', ''))
         flags = opts.get('flags', args.get('flags', ''))
         link = opts.get('link', args.get('link', ''))
-        ipv4 = opts.get('ipv4.address', args.get('ipv4.address', ''))
-        ipv6 = opts.get('ipv6.address', args.get('ipv6.address', ''))
+        ipv4 = opts.get('ipv4', {}).get('address', args.get('ipv4', {}).get('address', ''))
+        ipv6 = opts.get('ipv6', {}).get('address', args.get('ipv6', {}).get('address', ''))
         infos = salt.utils.odict.OrderedDict([
             ('lxc.net.{}.type'.format(ifs.index(dev)), {
                 'test': not type_,
